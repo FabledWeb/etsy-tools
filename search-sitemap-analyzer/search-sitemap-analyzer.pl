@@ -15,11 +15,14 @@ sub analyzeQueries {
   my $unfiltered_words_total= scalar @words;
 
   my $filter= $ARGV[1];
-  @queries= grep { /$filter/ } @queries if $filter;
+  my $rank=0;
+  my %ranked= map {$rank++;{$_ => $rank}} @queries;
+
+  @queries= grep { /$filter/i } @queries if $filter;
   @words= map {split ' '} @queries;
 
-  my @sorted = getSorted(\@queries);
-  my @sorted_words = getSorted(\@words);
+  my @sorted = map {{q => $_, rank => $ranked{$_}}} @queries;
+  my @sorted_words = getSortedByCount(\@words);
 
   my $limit= $ARGV[2] || 20;
   my @top= grep {$_} @sorted[0..$limit-1];
@@ -27,13 +30,13 @@ sub analyzeQueries {
 
   return {
     filtered_by => $filter,
-    phrases => {
+    searches => {
       unfiltered_total => $unfiltered_total,
       total => scalar @queries,
       total_unique => scalar @sorted,
       top => \@top,
     },
-    words => {
+    keywords => {
       unfiltered_total => $unfiltered_words_total,
       total => scalar @words,
       total_unique => scalar @sorted_words,
@@ -43,7 +46,7 @@ sub analyzeQueries {
   };
 }
 
-sub getSorted {
+sub getSortedByCount {
   my $list= shift;
   my %counts= ();
   $counts{$_}++ for @$list;
